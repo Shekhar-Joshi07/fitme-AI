@@ -1,0 +1,109 @@
+.chat-container {
+  max-width: 800px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.messages {
+  height: 60vh;
+  padding: 1.5rem;
+  background: #f9f9f9;
+}
+
+.message {
+  display: flex;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.message .content {
+  max-width: 70%;
+  padding: 1rem;
+  border-radius: 12px;
+  line-height: 1.5;
+}
+
+.message.user {
+  justify-content: flex-end;
+}
+
+.message.user .content {
+  background: #007bff;
+  color: white;
+  border-radius: 12px 12px 0 12px;
+}
+
+.message.assistant .content {
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 12px 12px 12px 0;
+}
+
+.message .content[data-error] {
+  background: #ffe6e6;
+  border-color: #ff4444;
+}
+
+form {
+  display: flex;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: white;
+  border-top: 1px solid #eee;
+}
+
+input {
+  flex: 1;
+  padding: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+button {
+  padding: 0 2rem;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+button:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.loading {
+  position: relative;
+  padding-left: 1.5rem;
+}
+
+.loading::after {
+  content: '';
+  display: inline-block;
+  animation: dots 1.5s infinite steps(3, end);
+}
+
+@keyframes dots {
+  0%, 20% { content: '.'; }
+  40% { content: '..'; }
+  60%, 100% { content: '...'; }
+}
+
+button:disabled {
+  background: #ccc;
+}
+
+.retry-btn {
+  margin-top: 0.5rem;
+  padding: 0.3rem 1rem;
+  background: #ff4444;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+} 
