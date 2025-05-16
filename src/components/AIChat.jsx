@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import OpenAI from "openai";
 import {
   Container,
@@ -11,10 +11,13 @@ import {
   useTheme,
   useMediaQuery,
   CircularProgress,
+  Fab,
+  Zoom,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import SendIcon from "@mui/icons-material/Send";
 import FitnessCenterIcon from "@mui/icons-material/FitnessCenter";
+import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
   height: "calc(100vh - 32px)",
@@ -34,6 +37,9 @@ const ChatHeader = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: theme.spacing(2),
+  position: "sticky",
+  top: 0,
+  zIndex: 1,
 }));
 
 const MessagesContainer = styled(Box)(({ theme }) => ({
@@ -43,20 +49,35 @@ const MessagesContainer = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: theme.spacing(2),
+  "&::-webkit-scrollbar": {
+    width: "8px",
+  },
+  "&::-webkit-scrollbar-track": {
+    background: theme.palette.background.default,
+  },
+  "&::-webkit-scrollbar-thumb": {
+    background: theme.palette.primary.main,
+    borderRadius: "4px",
+  },
 }));
 
 const MessageBubble = styled(Box, {
   shouldForwardProp: (prop) => prop !== "isUser",
 })(({ theme, isUser }) => ({
-  maxWidth: "70%",
-  padding: theme.spacing(1.5),
+  maxWidth: "80%",
+  padding: theme.spacing(1.5, 2),
   borderRadius: 20,
   wordWrap: "break-word",
+  animation: "fadeIn 0.3s ease-in",
+  [theme.breakpoints.down("sm")]: {
+    maxWidth: "90%",
+  },
   ...(isUser
     ? {
         alignSelf: "flex-end",
         background: theme.palette.primary.main,
         color: theme.palette.primary.contrastText,
+        borderBottomRightRadius: 5,
       }
     : {
         alignSelf: "flex-start",
@@ -65,7 +86,18 @@ const MessageBubble = styled(Box, {
             ? theme.palette.grey[800]
             : theme.palette.grey[100],
         color: theme.palette.text.primary,
+        borderBottomLeftRadius: 5,
       }),
+  "@keyframes fadeIn": {
+    from: {
+      opacity: 0,
+      transform: "translateY(10px)",
+    },
+    to: {
+      opacity: 1,
+      transform: "translateY(0)",
+    },
+  },
 }));
 
 const InputContainer = styled(Box)(({ theme }) => ({
@@ -73,12 +105,25 @@ const InputContainer = styled(Box)(({ theme }) => ({
   padding: theme.spacing(2),
   gap: theme.spacing(1),
   borderTop: `1px solid ${theme.palette.divider}`,
+  background: theme.palette.background.paper,
+  position: "sticky",
+  bottom: 0,
+}));
+
+const ScrollTopButton = styled(Fab)(({ theme }) => ({
+  position: "absolute",
+  bottom: theme.spacing(10),
+  right: theme.spacing(2),
+  zIndex: 2,
 }));
 
 export default function AIChat({ userDetails }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const messagesEndRef = useRef(null);
+  const containerRef = useRef(null);
 
   const openai = new OpenAI({
     baseURL: "https://openrouter.ai/api/v1",
@@ -97,10 +142,30 @@ export default function AIChat({ userDetails }) {
 
   useEffect(() => {
     localStorage.setItem("aiChatMessages", JSON.stringify(messages));
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (containerRef.current) {
+        const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+        setShowScrollTop(scrollTop < scrollHeight - clientHeight - 100);
+      }
+    };
+
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener("scroll", handleScroll);
+      return () => container.removeEventListener("scroll", handleScroll);
+    }
+  }, []);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -184,9 +249,11 @@ export default function AIChat({ userDetails }) {
           <Avatar sx={{ bgcolor: "secondary.main" }}>
             <FitnessCenterIcon />
           </Avatar>
-          <Typography variant="h6">FITME</Typography>
+          <Typography variant="h6" noWrap>
+            Health AI Assistant
+          </Typography>
         </ChatHeader>
-        <MessagesContainer>
+        <MessagesContainer ref={containerRef}>
           {messages.map((msg, index) => (
             <MessageBubble key={index} isUser={msg.role === "user"}>
               <Typography variant="body1">{msg.content}</Typography>
@@ -194,12 +261,13 @@ export default function AIChat({ userDetails }) {
           ))}
           {isLoading && (
             <MessageBubble isUser={false}>
-              <Typography variant="body1">
-                Thinking...{" "}
-                <CircularProgress style={{ marginTop: "-10px" }} size={15} />
-              </Typography>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Typography variant="body1">Thinking</Typography>
+                <CircularProgress size={16} />
+              </Box>
             </MessageBubble>
           )}
+          <div ref={messagesEndRef} />
         </MessagesContainer>
         <InputContainer component="form" onSubmit={handleSubmit}>
           <TextField
@@ -209,7 +277,12 @@ export default function AIChat({ userDetails }) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             disabled={isLoading}
-            sx={{ "& .MuiOutlinedInput-root": { borderRadius: 30 } }}
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                borderRadius: 30,
+                backgroundColor: theme.palette.background.default,
+              },
+            }}
           />
           <IconButton
             type="submit"
@@ -220,14 +293,24 @@ export default function AIChat({ userDetails }) {
               color: "primary.contrastText",
               "&:hover": { bgcolor: "primary.dark" },
               "&:disabled": { bgcolor: "action.disabledBackground" },
-              width: "55px",
-              height: "55px",
-              paddingLeft: "12px",
+              width: 56,
+              height: 56,
+              flexShrink: 0,
             }}
           >
-            <SendIcon sx={{ width: "25px", height: "25px" }} />
+            <SendIcon />
           </IconButton>
         </InputContainer>
+        <Zoom in={showScrollTop}>
+          <ScrollTopButton
+            size="small"
+            color="primary"
+            onClick={scrollToBottom}
+            aria-label="scroll to bottom"
+          >
+            <KeyboardArrowUpIcon />
+          </ScrollTopButton>
+        </Zoom>
       </StyledPaper>
     </Container>
   );
